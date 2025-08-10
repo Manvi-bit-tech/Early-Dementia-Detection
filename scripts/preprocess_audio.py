@@ -21,14 +21,24 @@ def extract_mfcc(file_path, n_mfcc=13, max_pad_len=300):
 
     return mfcc_db
 
-def load_audio_dataset(root_dir, n_mfcc=13, max_pad_len=300):
-    X, y = [], []
+def load_audio_dataset(root_dir, n_mfcc=13, max_pad_len=300, return_ids=False):
+    
+
+    X = []
+    y = []
+    ids = []
+
     for label_name, label_id in [('control', 1), ('dementia', 0)]:
         class_dir = os.path.join(root_dir, label_name)
         for filename in os.listdir(class_dir):
             if filename.endswith('.mp3'):
                 filepath = os.path.join(class_dir, filename)
-                mfcc_db = extract_mfcc(filepath, n_mfcc, max_pad_len)
-                X.append(mfcc_db)
+                mfcc = extract_mfcc(filepath, n_mfcc, max_pad_len)
+                X.append(mfcc)
                 y.append(label_id)
-    return np.array(X), np.array(y)
+                ids.append(filename.replace(".mp3", ""))
+
+    X = np.array(X)
+    y = np.array(y)
+
+    return (X, y, ids) if return_ids else (X, y)
