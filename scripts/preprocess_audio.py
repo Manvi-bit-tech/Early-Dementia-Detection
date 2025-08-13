@@ -21,24 +21,56 @@ def extract_mfcc(file_path, n_mfcc=13, max_pad_len=300):
 
     return mfcc_db
 
-def load_audio_dataset(root_dir, n_mfcc=13, max_pad_len=300, return_ids=False):
-    
+# scripts/preprocess_audio.py
+import os
+import librosa
+import numpy as np
 
+def load_audio_dataset(audio_dir, sr=16000, return_ids=False):
+    """
+    Loads raw audio waveforms from a directory and infers labels from filenames.
+    
+    Args:
+        audio_dir (str): Path to directory containing audio files.
+        sr (int): Sampling rate to load audio.
+        return_ids (bool): Whether to return the list of file IDs.
+        
+    Returns:
+        X (list of np.array): Raw waveforms.
+        y (np.array): Labels (0=Control, 1=Dementia).
+        ids (list): File IDs (optional).
+    """
     X = []
     y = []
     ids = []
 
-    for label_name, label_id in [('control', 1), ('dementia', 0)]:
-        class_dir = os.path.join(root_dir, label_name)
-        for filename in os.listdir(class_dir):
-            if filename.endswith('.mp3'):
-                filepath = os.path.join(class_dir, filename)
-                mfcc = extract_mfcc(filepath, n_mfcc, max_pad_len)
-                X.append(mfcc)
-                y.append(label_id)
-                ids.append(filename.replace(".mp3", ""))
+    # Scan all files in the directory
+    for root, _, files in os.walk(audio_dir):
+        for file in files:
+            if file.lower().endswith(".wav"):
+                file_path = os.path.join(root, file)
 
-    X = np.array(X)
-    y = np.array(y)
+                # Load raw waveform
+                signal, _ = librosa.load(file_path, sr=sr)
 
-    return (X, y, ids) if return_ids else (X, y)
+                # Label inference: customize this based on your filenames
+                fname_lower = file.lower()
+                if "dementia" in fname_lower:
+                    label = 1
+                elif "control" in fname_lower:
+                    label = 0
+                else:
+                    # Unknown label → skip
+                    continue
+
+                X.append(signal)
+                y.append(label)
+                ids.append(os.path.splitext(file)[0])  # filename without extension
+
+    X = np.array(X, dtype=object)  # variable-length waveforms
+    y = np.array(y, dtype=int)
+
+    if return_ids:
+        return X, y, ids
+    else:
+        return X, y
