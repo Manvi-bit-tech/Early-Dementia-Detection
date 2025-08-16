@@ -1,83 +1,108 @@
 # scripts/train_fusion_model.py
-
-import pandas as pd
+import os
+import joblib
 import numpy as np
-from scipy.sparse import hstack, csr_matrix
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, accuracy_score
-from sklearn.model_selection import train_test_split
+import pandas as pd
+import random
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
-from scripts.preprocess_text import load_text_data
-from scripts.preprocess_audio import load_audio_dataset
+TEXT_MODEL_PATH = "text_model.pkl"
+AUDIO_MODEL_PATH = "audio_model.pkl"
+TEXT_FEATURES_PATH = "data/features/text_features.csv"
+AUDIO_FEATURES_PATH = "data/features/audio_features.csv"
 
+# ------------------------
+# Load models safely
+# ------------------------
+text_bundle = joblib.load(TEXT_MODEL_PATH)
+audio_bundle = joblib.load(AUDIO_MODEL_PATH)
 
-def normalize_id(id_val):
-    """Convert IDs to a comparable format (string, lowercase, no extension)."""
-    return str(id_val).strip().lower().replace(".wav", "").replace(".txt", "")
+text_model = text_bundle["model"]
+vectorizer = text_bundle.get("vectorizer", None)
 
+scaler = audio_bundle.get("scaler", None)
+audio_pca = audio_bundle.get("pca", None)
+audio_model = audio_bundle["model"]
 
-# 1️⃣ Load text data
-df_text = load_text_data("preprocessed_data_cleaned.csv")
-df_text["id"] = df_text["id"].apply(normalize_id)
-df_text["label"] = df_text["label"].astype(int)
+# ------------------------
+# Evaluation helpers
+# ------------------------
+def evaluate_text():
+    df = pd.read_csv(TEXT_FEATURES_PATH)
+    y_true = df["label"].values
+    X = df.drop(columns=["id", "label"]).values
+    y_pred = text_model.predict(X)
 
-# 2️⃣ Load audio data
-X_audio, y_audio, audio_ids = load_audio_dataset("data/audio data/", return_ids=True)
-n_samples, n_mfcc, n_frames = X_audio.shape
-X_audio_flat = X_audio.reshape(n_samples, n_mfcc * n_frames)
+    print("\n=== Text Model Evaluation ===")
+    print(classification_report(y_true, y_pred))
+    print("Confusion Matrix:")
+    print(confusion_matrix(y_true, y_pred))
+    print(f"Accuracy: {accuracy_score(y_true, y_pred):.4f}")
 
-df_audio = pd.DataFrame(X_audio_flat)
-df_audio["id"] = pd.Series(audio_ids).apply(normalize_id)
-df_audio["label"] = pd.Series(y_audio).astype(int)
+def evaluate_audio():
+    df = pd.read_csv(AUDIO_FEATURES_PATH)
+    y_true = df["label"].values
+    X = df.drop(columns=["id", "label"]).values
 
-# 3️⃣ Debug: Check ID overlaps before merging
-text_ids = set(df_text["id"])
-audio_ids_set = set(df_audio["id"])
-common_ids = text_ids.intersection(audio_ids_set)
+    if scaler is not None:
+        X = scaler.transform(X)
+    if audio_pca is not None:
+        X = audio_pca.transform(X)
 
-print(f"📝 Text dataset: {len(text_ids)} unique IDs")
-print(f"🎵 Audio dataset: {len(audio_ids_set)} unique IDs")
-print(f"🔗 Common IDs: {len(common_ids)}")
-if len(common_ids) == 0:
-    print("⚠️ No matching IDs found between text & audio datasets! Check filenames/IDs.")
-    # Optionally exit early
-    # exit()
+    y_pred = audio_model.predict(X)
 
-# 4️⃣ Merge on ID only, then verify labels
-df_merged = pd.merge(df_text, df_audio, on="id", suffixes=("_text", "_audio"))
+    print("\n=== Audio Model Evaluation ===")
+    print(classification_report(y_true, y_pred))
+    print("Confusion Matrix:")
+    print(confusion_matrix(y_true, y_pred))
+    print(f"Accuracy: {accuracy_score(y_true, y_pred):.4f}")
 
-# Keep only rows where labels match
-df_merged = df_merged[df_merged["label_text"] == df_merged["label_audio"]].copy()
-df_merged.rename(columns={"label_text": "label"}, inplace=True)
-df_merged.drop(columns=["label_audio"], inplace=True)
+# ------------------------
+# Fusion inference
+# ------------------------
+def fused_inference(text_row, audio_row, text_weight=0.6, audio_weight=0.4):
+    """Fuse predictions from text and audio."""
+    text_prob = text_model.predict_proba([text_row])[0][1]
 
-print(f"✅ Merged dataset after label match: {df_merged.shape[0]} samples")
+    audio_input = audio_row.reshape(1, -1)
+    if scaler is not None:
+        audio_input = scaler.transform(audio_input)
+    if audio_pca is not None:
+        audio_input = audio_pca.transform(audio_input)
+    audio_prob = audio_model.predict_proba(audio_input)[0][1]
 
-if df_merged.empty:
-    raise ValueError("❌ Merged dataset is empty after label matching!")
+    fused_score = text_weight * text_prob + audio_weight * audio_prob
+    fused_label = 1 if fused_score >= 0.5 else 0
+    return fused_label, text_prob, audio_prob, fused_score
 
-# 5️⃣ Prepare features
-vectorizer = TfidfVectorizer(max_features=5000)
-X_text_tfidf = vectorizer.fit_transform(df_merged["cleaned_text"])
+# ------------------------
+# Main evaluation + demo
+# ------------------------
+def evaluate_models():
+    evaluate_text()
+    evaluate_audio()
 
-audio_feature_cols = [col for col in df_audio.columns if str(col).isdigit()]
-X_audio_numeric = df_merged[audio_feature_cols].to_numpy(dtype=np.float32)
+    # Demo fusion on common IDs
+    print("\n=== Fusion Demo on Common IDs ===")
+    df_text = pd.read_csv(TEXT_FEATURES_PATH)
+    df_audio = pd.read_csv(AUDIO_FEATURES_PATH)
 
-X_combined = hstack([csr_matrix(X_text_tfidf, dtype=np.float32),
-                     csr_matrix(X_audio_numeric, dtype=np.float32)], format="csr")
-y_combined = df_merged["label"].to_numpy()
+    common_ids = set(df_text["id"]).intersection(set(df_audio["id"]))
+    if not common_ids:
+        print("⚠️ No common IDs found between text and audio datasets.")
+        return
 
-# 6️⃣ Train-test split
-X_train, X_test, y_train, y_test = train_test_split(
-    X_combined, y_combined, test_size=0.2, random_state=42, stratify=y_combined
-)
+    sample_ids = random.sample(list(common_ids), min(5, len(common_ids)))
+    for sid in sample_ids:
+        t_row = df_text[df_text["id"] == sid].drop(columns=["id", "label"]).values[0]
+        a_row = df_audio[df_audio["id"] == sid].drop(columns=["id", "label"]).values[0]
+        fused_label, text_prob, audio_prob, fused_score = fused_inference(t_row, a_row)
 
-# 7️⃣ Train model
-clf = LogisticRegression(max_iter=200)
-clf.fit(X_train, y_train)
+        print(f"\nID: {sid}")
+        print(f"  Text prob (dementia): {text_prob:.3f}")
+        print(f"  Audio prob (dementia): {audio_prob:.3f}")
+        print(f"  → Fused decision: {fused_label} (score={fused_score:.3f})")
 
-# 8️⃣ Evaluation
-y_pred = clf.predict(X_test)
-print(f"🎯 Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-print(classification_report(y_test, y_pred))
+if __name__ == "__main__":
+    evaluate_models()
+    print("\n✅ Fusion system ready for single-subject inference via fused_inference()")

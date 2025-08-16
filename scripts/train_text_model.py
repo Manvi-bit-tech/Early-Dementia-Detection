@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import nltk
+import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, f1_score
@@ -18,10 +19,7 @@ nltk.download("averaged_perceptron_tagger_eng", quiet=True)
 # Feature extraction helpers
 # -----------------------
 def extract_pos_features(text):
-    """
-    Extract POS tag proportions from text.
-    Returns: dict of POS features.
-    """
+    """Extract POS tag proportions from text."""
     tokens = nltk.word_tokenize(text)
     pos_tags = nltk.pos_tag(tokens)
 
@@ -30,26 +28,25 @@ def extract_pos_features(text):
     for _, tag in pos_tags:
         pos_counts[tag] = pos_counts.get(tag, 0) + 1
 
-    # Normalize counts by total token count
     pos_features = {f"POS_{tag}": count / total for tag, count in pos_counts.items()}
     return pos_features
 
 
 def extract_hesitation_features(text):
-    """
-    Count occurrences of hesitation/filler words.
-    """
+    """Count occurrences of hesitation/filler words."""
     hesitations = ["uh", "um", "erm", "ah", "you know", "like", "mhm"]
     text_lower = text.lower()
-    counts = {f"hes_{h}": len(re.findall(rf"\b{re.escape(h)}\b", text_lower))
-              for h in hesitations}
+    counts = {
+        f"hes_{h}": len(re.findall(rf"\b{re.escape(h)}\b", text_lower))
+        for h in hesitations
+    }
     return counts
 
 
 # -----------------------
 # Load dataset
 # -----------------------
-df = pd.read_csv("preprocessed_data_cleaned.csv")  # Already cleaned_text + label + id
+df = pd.read_csv("preprocessed_data_cleaned.csv")  # cleaned_text + label + id
 if "cleaned_text" not in df.columns or "label" not in df.columns:
     raise ValueError("Dataset must contain 'cleaned_text' and 'label' columns.")
 
@@ -71,7 +68,8 @@ df_pos = pd.DataFrame(pos_feature_list).fillna(0)
 df_hes = pd.DataFrame(hes_feature_list).fillna(0)
 
 # Keep same row order
-extra_features = pd.concat([df_pos, df_hes], axis=1).to_numpy(dtype=np.float32)
+extra_features_df = pd.concat([df_pos, df_hes], axis=1).fillna(0)
+extra_features = extra_features_df.to_numpy(dtype=np.float32)
 
 # -----------------------
 # TF-IDF Features
@@ -127,7 +125,6 @@ print(f"Macro F1-score: {macro_f1:.4f}")
 feature_names = vectorizer.get_feature_names_out()
 coefs = svm_model.coef_[0]
 
-# Only show top words from TF-IDF part (exclude extra features)
 top_class1_idx = np.argsort(coefs[:len(feature_names)])[-10:][::-1]
 top_class0_idx = np.argsort(coefs[:len(feature_names)])[:10]
 
@@ -138,3 +135,14 @@ for idx in top_class1_idx:
 print("\nTop words for class 0 (Control):")
 for idx in top_class0_idx:
     print(feature_names[idx])
+
+# -----------------------
+# Save model bundle with fixed extra_columns
+# -----------------------
+joblib.dump({
+    "model": svm_model,
+    "vectorizer": vectorizer,
+    "extra_columns": list(extra_features_df.columns)  # 🔑 now saved permanently
+}, "text_model.pkl")
+
+print("✅ Text model saved with extra_columns included.")
