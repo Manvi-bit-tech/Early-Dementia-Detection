@@ -122,7 +122,7 @@ def prepare_audio_features(file):
 # --------------------------
 # Tabs for Modes
 # --------------------------
-tab1, tab2, tab3 = st.tabs(["✍️ Text", "🎵 Audio", "🔗 Fusion (coming soon)"])
+tab1, tab2= st.tabs(["✍️ Text", "🎵 Audio"])
 
 # ---- Text Tab ----
 with tab1:
@@ -138,12 +138,12 @@ with tab1:
             with st.container():
                 if pred == 1:
                     st.markdown(
-                        f"<div class='result-card danger'><h3>🧠 Dementia Detected</h3><p>Confidence: {prob:.2f}</p></div>",
+                        f"<div class='result-card danger'><h3 style=\"color: blue;\">🧠 Dementia Detected</h3><p style=\"color: blue;\">Confidence: {prob:.2f}</p></div>",
                         unsafe_allow_html=True,
                     )
                 else:
                     st.markdown(
-                        f"<div class='result-card success'><h3>✅ Control / No Dementia</h3><p>Confidence: {1-prob:.2f}</p></div>",
+                        f"<div class='result-card success'><h3 style=\"color: blue;\">✅ Control / No Dementia</h3><p style=\"color: blue;\">Confidence: {1-prob:.2f}</p></div>",
                         unsafe_allow_html=True,
                     )
                 st.progress(float(prob if pred == 1 else 1-prob))
@@ -163,12 +163,12 @@ with tab2:
             with st.container():
                 if pred == 1:
                     st.markdown(
-                        f"<div class='result-card danger'><h3>🧠 Dementia Detected</h3><p>Confidence: {prob:.2f}</p></div>",
+                        f"<div class='result-card danger'><h3 style=\"color: blue;\">🧠 Dementia Detected</h3><p style=\"color: blue;\">Confidence: {prob:.2f}</p></div>",
                         unsafe_allow_html=True,
                     )
                 else:
                     st.markdown(
-                        f"<div class='result-card success'><h3>✅ Control / No Dementia</h3><p>Confidence: {1-prob:.2f}</p></div>",
+                        f"<div class='result-card success'><h3 style=\"color: blue;\">✅ Control / No Dementia </h3><p style=\"color: blue;\">Confidence: {1-prob:.2f}</p></div>",
                         unsafe_allow_html=True,
                     )
                 st.progress(float(prob if pred == 1 else 1-prob))
@@ -176,6 +176,6 @@ with tab2:
             st.error(f"❌ Error: {e}")
 
 # ---- Fusion Tab ----
-with tab3:
-    st.subheader("🔗 Fusion Prediction (Coming Soon)")
-    st.info("This section will combine text + audio models for a stronger decision. 🚀")
+# with tab3:
+ #   st.subheader("🔗 Fusion Prediction (Coming Soon)")
+  #  st.info("This section will combine text + audio models for a stronger decision. 🚀")
