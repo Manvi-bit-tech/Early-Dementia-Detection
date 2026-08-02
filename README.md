@@ -1,76 +1,66 @@
-# Early-Dementia-Detection
-# 🧠 Early Dementia Detection (Text + Audio ML Models)
+🧠 Early Dementia Detection using Machine Learning
 
-This project is an **Early Dementia Detection system** built with **Machine Learning** and deployed via **Streamlit**.  
-It supports text-based and audio-based predictions, with a future plan to add **fusion inference**.
+An advanced machine learning system developed to detect early signs of dementia from linguistic and speech-derived features.
+The project implements a complete end-to-end ML pipeline — from feature extraction to ensemble modeling — to deliver accurate and reliable predictions.
 
----
+🚀 Project Overview
 
-## 🚀 Features
-- **Text Prediction**  
-  Paste cleaned transcripts → model predicts dementia vs control.
-- **Audio Prediction**  
-  Upload `.wav` or `.mp3` file → model extracts features and predicts.
-- **Fusion (Coming Soon)**  
-  Future-proof design for combining predictions from text + audio.
+Early detection of dementia plays a critical role in improving treatment outcomes and patient care. This project applies machine learning techniques to analyze cognitive patterns in language and assist in identifying potential indicators of dementia at an early stage.
 
----
+The primary objective is to enhance prediction performance through advanced feature engineering and ensemble learning.
 
-## 📂 Project Structure
-# 🧠 Early Dementia Detection (Text + Audio ML Models)
+⭐ Key Features
 
-This project is an **Early Dementia Detection system** built with **Machine Learning** and deployed via **Streamlit**.  
-It supports text-based and audio-based predictions, with a future plan to add **fusion inference**.
+✔ End-to-End Machine Learning Pipeline
+✔ Advanced Linguistic Feature Extraction
+✔ Multiple Tuned Machine Learning Models
+✔ Ensemble Voting & Stacking
+✔ Approximate 95% Prediction Accuracy
+✔ Modular and Scalable Code Design
+✔ Built with Real-World Applicability in Mind
 
----
+🛠️ Tech Stack
 
-## 🚀 Features
-- **Text Prediction**  
-  Paste cleaned transcripts → model predicts dementia vs control.
-- **Audio Prediction**  
-  Upload `.wav` or `.mp3` file → model extracts features and predicts.
-- **Fusion (Coming Soon)**  
-  Future-proof design for combining predictions from text + audio.
+Programming Language:
+Python
 
----
+Libraries & Frameworks:
+Scikit-learn
+XGBoost
+Pandas
+NumPy
+Matplotlib / Seaborn
 
-## 📂 Project Structure
-Early-Dementia-Detection/
-│── app.py # Streamlit app
-│── requirements.txt # Dependencies
-│── README.md # Project documentation
-│── text_model.pkl # Trained text model
-│── audio_model.pkl # Trained audio model
-│── scripts/ # Training & utility scripts
-│── data/ # (Optional) sample dataset
+Machine Learning Techniques:
+Feature Engineering
+Hyperparameter Tuning
+Ensemble Learning
+Model Stacking
 
+🎯 Model Performance
 
----
+The system achieves an approximate accuracy of 95% using an optimized ensemble voting classifier.
 
-## ⚙️ Setup & Run Locally
+Why Ensemble Learning?
 
-### 1️⃣ Clone Repo
-```bash
-git clone https://github.com/Manvi-bit-tech/Early-Dementia-Detection.git
-cd Early-Dementia-Detection
+Rather than relying on a single model, this project combines multiple strong learners to:
 
-python -m venv venv
-source venv/bin/activate   # (Linux/Mac)
-venv\Scripts\activate      # (Windows)
+✅ Reduce overfitting
+✅ Improve prediction stability
+✅ Increase generalization capability
+✅ Deliver more robust results
 
-pip install -r requirements.txt
+🧪 Machine Learning Models Used
 
-streamlit run app.py
+Logistic Regression (Hyperparameter Tuned)
+Lasso Regression
+Random Forest
+Support Vector Machine (RBF Kernel)
+XGBoost
 
-📊 Models
+🔥 Advanced Techniques Implemented
 
-Text Model: Trained using TF-IDF + POS + Hesitation features with Linear SVM.
+✅ Voting Ensemble (Lasso + Random Forest + SVM)
+✅ Stacking (XGBoost + Random Forest + SVM)
 
-Audio Model: Trained using MFCC, deltas, spectral features with XGBoost.
-
-Both models are saved as .pkl and loaded directly in the app.
-
-👩‍💻 Author
-
-Manvi Dhamija
-B.Tech ECE | AI/ML Enthusiast | Data Science Learner
+Both approaches significantly improved performance compared to standalone models.
